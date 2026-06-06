@@ -261,7 +261,11 @@ export function VistoriaDetailModal({ vistoria, open, onClose }: VistoriaDetailM
       </Dialog>
 
       <Dialog open={!!lightboxSrc} onOpenChange={(v) => !v && setLightboxSrc(null)}>
-        <DialogContent className="max-w-4xl border-none bg-black/95 p-2">
+        <DialogContent
+          className="max-w-4xl border-none bg-black/95 p-2"
+          screenReaderTitle="Visualização da foto"
+          screenReaderDescription="Foto ampliada da vistoria."
+        >
           {lightboxSrc && (
             <img
               src={lightboxSrc}

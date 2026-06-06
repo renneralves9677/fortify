@@ -23,10 +23,16 @@ export const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+  /** Use when the dialog has no visible title (e.g. image lightbox). */
+  screenReaderTitle?: string;
+  screenReaderDescription?: string;
+};
+
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  DialogContentProps
+>(({ className, children, screenReaderTitle, screenReaderDescription, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -37,6 +43,14 @@ export const DialogContent = React.forwardRef<
       )}
       {...props}
     >
+      {(screenReaderTitle || screenReaderDescription) && (
+        <DialogHeader className="sr-only">
+          {screenReaderTitle && <DialogTitle>{screenReaderTitle}</DialogTitle>}
+          {screenReaderDescription && (
+            <DialogDescription>{screenReaderDescription}</DialogDescription>
+          )}
+        </DialogHeader>
+      )}
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
         <X className="h-4 w-4" />

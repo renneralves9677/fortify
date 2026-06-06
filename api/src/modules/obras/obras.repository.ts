@@ -188,4 +188,11 @@ export class ObrasRepository implements ObrasRepositoryPort {
       data: { status: 'encerrada' },
     });
   }
+
+  updateBudgetForCompany(id: string, companyId: string, budgetPlanned: number) {
+    return prisma.obra.updateMany({
+      where: { id, companyId, status: { not: 'encerrada' } },
+      data: { budgetPlanned },
+    });
+  }
 }

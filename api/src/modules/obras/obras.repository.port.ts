@@ -12,6 +12,7 @@ export type ObrasRepositoryPort = Pick<
   | 'findAuditLogsForObra'
   | 'findUsersByIds'
   | 'closeObra'
+  | 'updateBudgetForCompany'
   | 'getMaxStepSortOrder'
   | 'createStep'
   | 'updateStepForObra'

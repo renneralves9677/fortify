@@ -9,7 +9,10 @@ import { Button } from '@shared/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 import { useConfirm } from '@shared/components/ConfirmProvider';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
-import { formatCurrency, formatDate, statusLabels } from '@shared/lib/format';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import NotFoundPage from '@features/errors/pages/NotFoundPage';
+import { getQueryErrorMessage, isNotFoundError } from '@shared/lib/query-errors';
+import { formatCurrency, formatDate, formatDateTimeHuman, statusLabels } from '@shared/lib/format';
 import { SignatureTimeline } from '@features/signatures/components/SignatureTimeline';
 import { DocumentViewer } from '@features/signatures/components/DocumentViewer';
 import { useIsAdmin } from '@/stores/auth-store';
@@ -36,7 +39,7 @@ export default function ContractDetailPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<'resumo' | 'rastreabilidade' | 'documento' | 'versoes'>('resumo');
 
-  const { data: contract, isLoading } = useQuery({
+  const { data: contract, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['contract', id],
     queryFn: async () => (await api.get(`/contracts/${id}`)).data,
     enabled: !!id,
@@ -114,7 +117,25 @@ export default function ContractDetailPage() {
   };
 
   if (isLoading) return <PageSkeleton />;
-  if (!contract) return <p className="text-danger">Contrato não encontrado</p>;
+  if (isError) {
+    if (isNotFoundError(error)) {
+      return (
+        <NotFoundPage
+          compact
+          title="Contrato não encontrado"
+          description="Este contrato não existe ou você não tem permissão para visualizá-lo."
+        />
+      );
+    }
+    return (
+      <QueryErrorState
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
+  if (!contract) return <PageSkeleton />;
 
   const tabs = [
     { key: 'resumo' as const, label: 'Resumo' },
@@ -195,7 +216,7 @@ export default function ContractDetailPage() {
                 <li key={ev.id} className="border-l-2 border-brand/30 pl-4">
                   <p className="font-medium">{eventLabels[ev.eventType] ?? ev.eventType}</p>
                   <p className="text-xs text-ink-muted">
-                    {new Date(ev.createdAt).toLocaleString('pt-BR')}
+                    {formatDateTimeHuman(ev.createdAt)}
                     {ev.signerName ? ` · ${ev.signerName}` : ''}
                     {ev.ip ? ` · IP ${ev.ip}` : ''}
                   </p>

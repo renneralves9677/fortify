@@ -183,7 +183,7 @@ npm run dev:web
 ## Solução de problemas
 
 **`prisma generate` falha com EPERM (Windows)**  
-Pare o servidor da API (`Ctrl+C`) e rode novamente. O client Prisma não pode ser reescrito com o processo em execução.
+O engine do Prisma fica bloqueado enquanto a API está rodando. Pare `npm run dev` (e o Prisma Studio, se aberto), depois rode `npm run prisma:generate` em `api/`. O script tenta algumas vezes automaticamente; `npm run dev` já executa o generate antes de subir o servidor (`predev`).
 
 **API não conecta ao banco**  
 Confirme `docker compose ps`, que `DATABASE_URL` aponta para `localhost:5432` e que as migrations foram aplicadas.

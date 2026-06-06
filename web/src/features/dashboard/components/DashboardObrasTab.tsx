@@ -18,12 +18,45 @@ export function DashboardObrasTab({ data }: Props) {
     secondary: row.obras,
   }));
 
-  const projected = data.custoRealizado + data.comprometido;
-  const usagePct =
-    data.orcamentoPrevisto > 0 ? (projected / data.orcamentoPrevisto) * 100 : null;
+  const planned = data.orcamentoPrevisto;
+  const realized = data.custoRealizado;
+  const committed = data.comprometido;
+  const projected = realized + committed;
+  const isOver = planned > 0 && projected > planned;
+  const usagePct = planned > 0 ? (projected / planned) * 100 : null;
+  const committedOver = planned > 0 && committed > planned;
+  const overAmount = isOver ? projected - planned : 0;
+
+  const barBase = isOver ? projected : planned;
+  const realizedPct = barBase > 0 ? (realized / barBase) * 100 : 0;
+  const plannedMarkerPct = isOver && barBase > 0 ? (planned / barBase) * 100 : null;
+  const committedPct = barBase > 0 ? (committed / barBase) * 100 : 0;
+  const withinCommittedPct =
+    isOver && plannedMarkerPct != null
+      ? Math.max(0, Math.min(committedPct, plannedMarkerPct - realizedPct))
+      : committedPct;
+  const overBarPct =
+    isOver && plannedMarkerPct != null ? Math.max(0, 100 - plannedMarkerPct) : 0;
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link to="/obras">
+          <Card className="h-full py-4 transition-colors hover:border-brand/40">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Obras ativas</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{data.ativas}</p>
+            <p className="text-sm text-ink-muted">
+              {data.createdInPeriod} nova{data.createdInPeriod === 1 ? '' : 's'} no período
+            </p>
+          </Card>
+        </Link>
+        <Card className="py-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Custos no período</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums">{formatCurrency(data.custoRealizado)}</p>
+          <p className="text-sm text-ink-muted">realizado no intervalo selecionado</p>
+        </Card>
+      </div>
+
       <Card>
         <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Orçamento das obras ativas</p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -37,26 +70,67 @@ export function DashboardObrasTab({ data }: Props) {
           </div>
           <div>
             <p className="text-sm text-ink-muted">Comprometido</p>
-            <p className="font-semibold tabular-nums">{formatCurrency(data.comprometido)}</p>
+            <p className={cn('font-semibold tabular-nums', committedOver && 'text-danger')}>
+              {formatCurrency(data.comprometido)}
+            </p>
           </div>
           <div>
             <p className="text-sm text-ink-muted">Projetado</p>
-            <p className="font-semibold tabular-nums">
+            <p className={cn('font-semibold tabular-nums', isOver && 'text-danger')}>
               {formatCurrency(projected)}
-              {usagePct != null && (
-                <span className="ml-1 text-xs font-normal text-ink-muted">
-                  ({usagePct.toFixed(0)}% do previsto)
+              {isOver ? (
+                <span className="ml-1 text-xs font-normal text-danger">
+                  ({formatCurrency(overAmount)} acima do previsto)
                 </span>
+              ) : (
+                usagePct != null && (
+                  <span className="ml-1 text-xs font-normal text-ink-muted">
+                    ({usagePct.toFixed(0)}% do previsto)
+                  </span>
+                )
               )}
             </p>
           </div>
         </div>
-        {data.orcamentoPrevisto > 0 && (
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-brand transition-all"
-              style={{ width: `${Math.min(usagePct ?? 0, 100)}%` }}
-            />
+        {planned > 0 && (
+          <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-muted">
+            {isOver ? (
+              <>
+                {realizedPct > 0 && (
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-l-full bg-brand transition-all"
+                    style={{ width: `${realizedPct}%` }}
+                  />
+                )}
+                {withinCommittedPct > 0 && (
+                  <div
+                    className="absolute inset-y-0 bg-brand/35 transition-all"
+                    style={{
+                      left: `${realizedPct}%`,
+                      width: `${withinCommittedPct}%`,
+                    }}
+                  />
+                )}
+                {overBarPct > 0 && (
+                  <div
+                    className="absolute inset-y-0 rounded-r-full bg-danger transition-all"
+                    style={{
+                      left: `${plannedMarkerPct}%`,
+                      width: `${overBarPct}%`,
+                    }}
+                  />
+                )}
+                <div
+                  className="absolute inset-y-0 w-px bg-background"
+                  style={{ left: `${plannedMarkerPct}%` }}
+                />
+              </>
+            ) : (
+              <div
+                className="h-full rounded-full bg-brand transition-all"
+                style={{ width: `${Math.min(usagePct ?? 0, 100)}%` }}
+              />
+            )}
           </div>
         )}
       </Card>

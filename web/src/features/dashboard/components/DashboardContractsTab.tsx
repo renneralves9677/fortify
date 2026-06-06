@@ -21,16 +21,30 @@ export function DashboardContractsTab({ data }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="py-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Carteira ativa</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums">{formatCurrency(data.totalValueActive)}</p>
+          <p className="text-sm text-ink-muted">
+            {data.ativos} contrato{data.ativos === 1 ? '' : 's'} na carteira
+          </p>
+        </Card>
         <Card className="py-4">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">No período</p>
           <p className="mt-1 text-xl font-semibold tabular-nums">{data.createdInPeriod}</p>
-          <p className="text-sm text-ink-muted">contratos criados</p>
+          <p className="text-sm text-ink-muted">com vigência ou assinatura no período</p>
         </Card>
+        <Link to="/contratos/assinaturas">
+          <Card className="h-full py-4 transition-colors hover:border-brand/40">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Assinaturas pendentes</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{data.assinaturasPendentes}</p>
+            <p className="text-sm text-ink-muted">aguardando assinatura</p>
+          </Card>
+        </Link>
         <Card className="py-4">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Valor no período</p>
           <p className="mt-1 text-xl font-semibold tabular-nums">{formatCurrency(data.totalValueInPeriod)}</p>
-          <p className="text-sm text-ink-muted">soma dos novos contratos</p>
+          <p className="text-sm text-ink-muted">soma dos contratos do período</p>
         </Card>
       </div>
 

@@ -13,7 +13,6 @@ type ObraCustosTabProps = {
   canEdit: boolean;
   loading?: boolean;
   onLancarCusto: () => void;
-  onEmitirOc?: () => void;
 };
 
 export function ObraCustosTab({
@@ -22,7 +21,6 @@ export function ObraCustosTab({
   canEdit,
   loading = false,
   onLancarCusto,
-  onEmitirOc,
 }: ObraCustosTabProps) {
   const [selectedCusto, setSelectedCusto] = useState<ObraCusto | null>(null);
 
@@ -46,16 +44,9 @@ export function ObraCustosTab({
             </div>
           </div>
           {canEdit && (
-            <div className="flex flex-wrap gap-2">
-              {onEmitirOc && (
-                <Button size="sm" variant="secondary" onClick={onEmitirOc}>
-                  Emitir O.C.
-                </Button>
-              )}
-              <Button size="sm" onClick={onLancarCusto}>
-                Lançar custo
-              </Button>
-            </div>
+            <Button size="sm" onClick={onLancarCusto}>
+              Lançar custo
+            </Button>
           )}
         </div>
 
@@ -63,18 +54,7 @@ export function ObraCustosTab({
           <EmptyState
             title="Nenhum custo lançado"
             description="Lance despesas diretas ou receba ordens de compra para registrar gastos."
-            action={
-              canEdit ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {onEmitirOc && (
-                    <Button variant="secondary" onClick={onEmitirOc}>
-                      Emitir O.C.
-                    </Button>
-                  )}
-                  <Button onClick={onLancarCusto}>Lançar custo direto</Button>
-                </div>
-              ) : undefined
-            }
+            action={canEdit ? <Button onClick={onLancarCusto}>Lançar custo direto</Button> : undefined}
           />
         ) : (
           <ul className="space-y-3">

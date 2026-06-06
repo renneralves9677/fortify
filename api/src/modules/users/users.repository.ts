@@ -12,15 +12,20 @@ const userSelect = {
 } as const;
 
 export class UsersRepository {
-  private usersWhere(companyId: string, search?: string) {
+  private usersWhere(
+    companyId: string,
+    options: { search?: string; role?: UserRole; active?: boolean } = {},
+  ) {
     return {
       companyId,
       deletedAt: null,
-      ...(search
+      ...(options.role ? { role: options.role } : {}),
+      ...(options.active !== undefined ? { active: options.active } : {}),
+      ...(options.search
         ? {
             OR: [
-              { name: { contains: search, mode: 'insensitive' as const } },
-              { email: { contains: search, mode: 'insensitive' as const } },
+              { name: { contains: options.search, mode: 'insensitive' as const } },
+              { email: { contains: options.search, mode: 'insensitive' as const } },
             ],
           }
         : {}),
@@ -29,10 +34,10 @@ export class UsersRepository {
 
   findManyByCompany(
     companyId: string,
-    options: { search?: string; skip?: number; take?: number } = {},
+    options: { search?: string; role?: UserRole; active?: boolean; skip?: number; take?: number } = {},
   ) {
     return prisma.user.findMany({
-      where: this.usersWhere(companyId, options.search),
+      where: this.usersWhere(companyId, options),
       select: userSelect,
       orderBy: { name: 'asc' },
       ...(options.skip !== undefined ? { skip: options.skip } : {}),
@@ -40,8 +45,11 @@ export class UsersRepository {
     });
   }
 
-  countByCompany(companyId: string, search?: string) {
-    return prisma.user.count({ where: this.usersWhere(companyId, search) });
+  countByCompany(
+    companyId: string,
+    options: { search?: string; role?: UserRole; active?: boolean } = {},
+  ) {
+    return prisma.user.count({ where: this.usersWhere(companyId, options) });
   }
 
   findByIdInCompany(id: string, companyId: string) {

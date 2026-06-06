@@ -10,6 +10,9 @@ import { PageHeader } from '@shared/components/ui/PageHeader';
 import { Tabs, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 import { ListLoadingOverlay } from '@shared/components/ui/ListLoadingOverlay';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import NotFoundPage from '@features/errors/pages/NotFoundPage';
+import { getQueryErrorMessage, isNotFoundError } from '@shared/lib/query-errors';
 import { useIsAdmin } from '@/stores/auth-store';
 import { FileDropzone } from '@shared/components/ui/FileDropzone';
 import {
@@ -42,7 +45,7 @@ import {
   purchaseOrderCategories,
   useCostCategories,
 } from '@features/obras/lib/cost-categories';
-import { computeBudgetSummary } from '@features/obras/lib/budget-summary';
+import { computeBudgetSummary, getBudgetCompactLabel } from '@features/obras/lib/budget-summary';
 
 function todayInputValue() {
   const d = new Date();
@@ -88,7 +91,7 @@ export default function ObraDetailPage() {
   const poApprovalThreshold = costCatalog?.poApprovalThreshold ?? 5000;
   const tabs = useMemo(() => getObraTabs(isAdmin), [isAdmin]);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['obra', id],
     queryFn: async () => (await api.get(`/obras/${id}`)).data,
     enabled: !!id,
@@ -166,6 +169,14 @@ export default function ObraDetailPage() {
     meta: { successMessage: 'Recebimento registrado' },
   });
 
+  const updateBudget = useMutation({
+    mutationFn: (budgetPlanned: number) => api.patch(`/obras/${id}/budget`, { budgetPlanned }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['obra', id] });
+    },
+    meta: { successMessage: 'Orçamento atualizado' },
+  });
+
   const closeObra = useMutation({
     mutationFn: () => api.post(`/obras/${id}/close`),
     onSuccess: () => {
@@ -177,7 +188,25 @@ export default function ObraDetailPage() {
   });
 
   if (isLoading) return <PageSkeleton />;
-  if (!data) return <p className="text-danger">Obra não encontrada</p>;
+  if (isError) {
+    if (isNotFoundError(error)) {
+      return (
+        <NotFoundPage
+          compact
+          title="Obra não encontrada"
+          description="Esta obra não existe ou você não tem permissão para visualizá-la."
+        />
+      );
+    }
+    return (
+      <QueryErrorState
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
+  if (!data) return <PageSkeleton />;
 
   const isClosed = data.status === 'encerrada';
   const canEdit = isAdmin && !isClosed;
@@ -286,13 +315,12 @@ export default function ObraDetailPage() {
         <Card className="py-3 text-sm">
           <p className="text-ink-muted">Orçamento</p>
           <p className="font-medium">
-            {budgetSummary.planned > 0 ? (
-              <>
-                {budgetSummary.projectedPct?.toFixed(0)}% ·{' '}
-                {formatCurrency(data.budgetRealized ?? 0)} / {formatCurrency(budgetSummary.planned)}
-              </>
-            ) : (
-              <>{formatCurrency(data.budgetRealized ?? 0)} realizado</>
+            {getBudgetCompactLabel(budgetSummary)}
+            {budgetSummary.planned > 0 && (
+              <span className="text-ink-muted">
+                {' '}
+                · {formatCurrency(data.budgetRealized ?? 0)} / {formatCurrency(budgetSummary.planned)}
+              </span>
             )}
           </p>
         </Card>
@@ -312,6 +340,11 @@ export default function ObraDetailPage() {
           budgetRealized={data.budgetRealized ?? 0}
           custos={data.custos ?? []}
           purchaseOrders={(data.purchaseOrders ?? []) as ObraPurchaseOrder[]}
+          canEdit={canEdit}
+          budgetUpdating={updateBudget.isPending}
+          onBudgetUpdate={
+            canEdit ? (budgetPlanned) => updateBudget.mutate(budgetPlanned) : undefined
+          }
           onGoToCustos={() => activateTab('Custos')}
         />
       </div>
@@ -358,7 +391,6 @@ export default function ObraDetailPage() {
           canEdit={canEdit}
           loading={isFetching}
           onLancarCusto={() => setCustoModalOpen(true)}
-          onEmitirOc={canEdit ? () => setOcModalOpen(true) : undefined}
         />
       )}
 

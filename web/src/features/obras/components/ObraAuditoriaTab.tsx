@@ -7,6 +7,8 @@ import { Select } from '@shared/components/ui/Input';
 import { EmptyState } from '@shared/components/ui/EmptyState';
 import { ListLoadingOverlay } from '@shared/components/ui/ListLoadingOverlay';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { formatDateTime } from '@shared/lib/format';
 import {
   AuditDetailModal,
@@ -29,7 +31,7 @@ export function ObraAuditoriaTab({ obraId }: Props) {
   const [selectedLog, setSelectedLog] = useState<ObraAuditLog | null>(null);
   const [filterGroup, setFilterGroup] = useState<AuditFilter>('all');
 
-  const { data = [], isLoading, isFetching } = useQuery({
+  const { data = [], isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['obra-audit', obraId],
     queryFn: async () => (await api.get<ObraAuditLog[]>(`/obras/${obraId}/audit`)).data,
     enabled: !!obraId,
@@ -53,6 +55,17 @@ export function ObraAuditoriaTab({ obraId }: Props) {
   }, [data, filterGroup]);
 
   if (isLoading) return <PageSkeleton />;
+  if (isError) {
+    return (
+      <QueryErrorState
+        compact
+        title="Não foi possível carregar a auditoria"
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
 
   const filterActive = filterGroup !== 'all';
   const subtitle = filterActive

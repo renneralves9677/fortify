@@ -6,6 +6,8 @@ import { Card } from '@shared/components/ui/Card';
 import { Badge } from '@shared/components/ui/Badge';
 import { ListLoadingOverlay } from '@shared/components/ui/ListLoadingOverlay';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { formatCurrency, formatDate } from '@shared/lib/format';
 import { UploadPreview, uploadIdFromUrl } from '@features/obras/components/VistoriaDetailModal';
 import type { ObraReportModel } from '@features/obras/lib/obra-report';
@@ -109,7 +111,7 @@ function GroupCard({ group }: { group: ObraReportModel['groups'][number] }) {
 }
 
 export function ObraPreviewTab({ obraId }: ObraPreviewTabProps) {
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['obra-report-preview', obraId],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -123,7 +125,18 @@ export function ObraPreviewTab({ obraId }: ObraPreviewTabProps) {
   });
 
   if (isLoading) return <PageSkeleton />;
-  if (!data) return <p className="text-sm text-muted-foreground">Não foi possível carregar o preview.</p>;
+  if (isError) {
+    return (
+      <QueryErrorState
+        compact
+        title="Não foi possível carregar o preview"
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
+  if (!data) return <PageSkeleton />;
 
   return (
     <ListLoadingOverlay loading={isFetching && !isLoading} className="space-y-4">

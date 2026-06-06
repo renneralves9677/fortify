@@ -240,7 +240,7 @@ export function serializeEvent(ev: {
     ip: maskIp(ev.ip),
     userAgent: ev.userAgent,
     eventHash: ev.eventHash,
-    createdAt: ev.createdAt,
+    createdAt: ev.createdAt.toISOString(),
     signerName: ev.signer?.name ?? null,
   };
 }

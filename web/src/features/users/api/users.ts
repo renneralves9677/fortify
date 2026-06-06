@@ -25,9 +25,25 @@ export type UpdateUserPayload = {
   active?: boolean;
 };
 
-export async function listUsers(params: ListQueryParams = {}) {
+export type ListUsersParams = ListQueryParams & {
+  role?: UserRole | '';
+  active?: '' | 'true' | 'false';
+};
+
+export function usersListQueryString(params: ListUsersParams = {}) {
+  const q = new URLSearchParams();
+  if (params.page) q.set('page', String(params.page));
+  if (params.pageSize) q.set('pageSize', String(params.pageSize));
+  if (params.search?.trim()) q.set('search', params.search.trim());
+  if (params.role) q.set('role', params.role);
+  if (params.active === 'true' || params.active === 'false') q.set('active', params.active);
+  const s = q.toString();
+  return s ? `?${s}` : '';
+}
+
+export async function listUsers(params: ListUsersParams = {}) {
   const { data } = await api.get<PaginatedResponse<UserRow>>(
-    `/users${listQueryString(params)}`,
+    `/users${usersListQueryString(params)}`,
   );
   return data;
 }

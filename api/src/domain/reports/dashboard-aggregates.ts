@@ -55,8 +55,47 @@ export function monthKeysFromRange(range: { from?: string; to?: string }, fallba
   return keys.length ? keys : lastNMonthKeys(fallbackMonths);
 }
 
+export type ContractDashboardPeriodRow = {
+  createdAt: Date;
+  signedAt?: Date | null;
+  startDate?: Date | null;
+  value: { toString(): string };
+};
+
+export function contractDashboardReferenceDate(row: {
+  createdAt: Date;
+  signedAt?: Date | null;
+  startDate?: Date | null;
+}): Date {
+  return new Date(row.signedAt ?? row.startDate ?? row.createdAt);
+}
+
+export function dateKeyFromLocalDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function isDateWithinDashboardRange(
+  date: Date,
+  range: { from?: string | null; to?: string | null },
+): boolean {
+  if (!range.from && !range.to) return true;
+  const key = dateKeyFromLocalDate(date);
+  if (range.from && key < range.from) return false;
+  if (range.to && key > range.to) return false;
+  return true;
+}
+
+export function filterContractsInDashboardPeriod<T extends ContractDashboardPeriodRow>(
+  rows: T[],
+  range: { from?: string | null; to?: string | null },
+): T[] {
+  return rows.filter((row) =>
+    isDateWithinDashboardRange(contractDashboardReferenceDate(row), range),
+  );
+}
+
 export function aggregateContractsMonthly(
-  rows: { createdAt: Date; value: { toString(): string } }[],
+  rows: ContractDashboardPeriodRow[],
   monthKeys: string[],
 ): MonthlyCountValue[] {
   const countMap = new Map<string, number>();
@@ -66,7 +105,7 @@ export function aggregateContractsMonthly(
     valueMap.set(key, 0);
   }
   for (const row of rows) {
-    const key = monthKeyFromDate(new Date(row.createdAt));
+    const key = monthKeyFromDate(contractDashboardReferenceDate(row));
     if (!countMap.has(key)) continue;
     countMap.set(key, (countMap.get(key) ?? 0) + 1);
     valueMap.set(key, (valueMap.get(key) ?? 0) + Number(row.value));

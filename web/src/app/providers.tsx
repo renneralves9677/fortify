@@ -19,13 +19,6 @@ declare module '@tanstack/react-query' {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 30_000, retry: 1 },
-    mutations: {
-      onSuccess: (_data, _vars, _ctx, mutation) => {
-        if (mutation.meta?.successMessage) {
-          notify.success(mutation.meta.successMessage);
-        }
-      },
-    },
   },
   queryCache: new QueryCache({
     onError: (error, query) => {
@@ -34,7 +27,12 @@ const queryClient = new QueryClient({
     },
   }),
   mutationCache: new MutationCache({
-    onError: (error, _vars, _ctx, mutation) => {
+    onSuccess: (_data, _vars, _onMutateResult, mutation) => {
+      if (mutation.meta?.successMessage) {
+        notify.success(mutation.meta.successMessage);
+      }
+    },
+    onError: (error, _vars, _onMutateResult, mutation) => {
       if (mutation.meta?.skipGlobalError) return;
       notify.fromError(error, 'Erro ao salvar');
     },

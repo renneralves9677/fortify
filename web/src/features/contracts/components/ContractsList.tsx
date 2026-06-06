@@ -6,6 +6,8 @@ import { Badge } from '@shared/components/ui/Badge';
 import { Button } from '@shared/components/ui/Button';
 import { EmptyState } from '@shared/components/ui/EmptyState';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { useConfirm } from '@shared/components/ConfirmProvider';
 import { formatCurrency, formatDate, statusLabels } from '@shared/lib/format';
 import { useIsAdmin } from '@/stores/auth-store';
@@ -53,7 +55,7 @@ export function ContractsList() {
   const page = Math.max(1, Number(params.get('page')) || 1);
   const filters = useMemo(() => parseFilters(params), [params]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['contracts', page, filters],
     queryFn: () => listContracts({ page, pageSize: PAGE_SIZE, ...filters }),
   });
@@ -82,6 +84,15 @@ export function ContractsList() {
   }
 
   if (isLoading && !data) return <PageSkeleton />;
+  if (isError && !data) {
+    return (
+      <QueryErrorState
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
 
   const items = data?.items ?? [];
   const closableStatuses = new Set(['ATIVO', 'VENCENDO']);

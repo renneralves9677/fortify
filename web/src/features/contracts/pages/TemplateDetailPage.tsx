@@ -7,6 +7,9 @@ import { Button } from '@shared/components/ui/Button';
 import { Input, Select, Textarea } from '@shared/components/ui/Input';
 import { Tabs, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import NotFoundPage from '@features/errors/pages/NotFoundPage';
+import { getQueryErrorMessage, isNotFoundError } from '@shared/lib/query-errors';
 import { TemplateEditor } from '@features/contracts/components/TemplateEditor';
 import { TemplatePreviewPanel } from '@features/contracts/components/TemplatePreviewPanel';
 import { DocumentViewer } from '@features/signatures/components/DocumentViewer';
@@ -45,7 +48,7 @@ export default function TemplateDetailPage() {
   const [viewVersionId, setViewVersionId] = useState('');
   const [readOnly, setReadOnly] = useState(false);
 
-  const { data: template, isLoading } = useQuery({
+  const { data: template, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['template', id],
     queryFn: () => fetchTemplate(id!),
     enabled: !!id,
@@ -115,7 +118,26 @@ export default function TemplateDetailPage() {
     setFields((prev) => prev.map((f, i) => (i === index ? { ...f, ...patch } : f)));
   };
 
-  if (isLoading || !template) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton />;
+  if (isError) {
+    if (isNotFoundError(error)) {
+      return (
+        <NotFoundPage
+          compact
+          title="Template não encontrado"
+          description="Este template não existe ou você não tem permissão para visualizá-lo."
+        />
+      );
+    }
+    return (
+      <QueryErrorState
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
+  if (!template) return <PageSkeleton />;
 
   const activeVersionTab = viewVersionId || CURRENT_VERSION_TAB;
 

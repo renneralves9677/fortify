@@ -12,7 +12,7 @@ export interface RecordEventInput {
 }
 
 export function buildEventData(input: RecordEventInput): Prisma.SignatureEventCreateInput {
-  const createdAt = new Date().toISOString();
+  const createdAt = new Date();
   const eventHash = hashEventPayload({
     flowId: input.flowId,
     signerId: input.signerId ?? null,
@@ -21,7 +21,7 @@ export function buildEventData(input: RecordEventInput): Prisma.SignatureEventCr
     ip: input.ip ?? null,
     userAgent: input.userAgent ?? null,
     previousEventHash: input.previousEventHash ?? null,
-    createdAt,
+    createdAt: createdAt.toISOString(),
   });
 
   return {
@@ -32,6 +32,7 @@ export function buildEventData(input: RecordEventInput): Prisma.SignatureEventCr
     ip: input.ip ?? null,
     userAgent: input.userAgent ?? null,
     previousEventHash: input.previousEventHash ?? null,
+    createdAt,
     eventHash,
   };
 }

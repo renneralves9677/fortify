@@ -8,15 +8,13 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "tsx prisma/seed.ts",
+    "predev": "node scripts/prisma-generate.mjs",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:generate": "prisma generate",
+    "prisma:generate": "node scripts/prisma-generate.mjs",
     "prisma:studio": "prisma studio",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint:arch": "tsx scripts/lint-architecture.ts"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",

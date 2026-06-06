@@ -23,6 +23,7 @@ export type DashboardData = {
   contracts: {
     ativos: number;
     assinaturasPendentes: number;
+    totalValueActive: number;
     createdInPeriod: number;
     totalValueInPeriod: number;
     byStatus: { status: string; count: number }[];

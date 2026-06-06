@@ -9,13 +9,20 @@ class FakeReportsRepository implements Partial<ReportsRepository> {
       3,
       1,
       { _sum: { amount: 5000 } },
+      { _sum: { value: { toString: () => '7500' } } },
     ] as never);
   }
 
   getDashboardPeriodData() {
     return Promise.resolve([
       [
-        { createdAt: new Date('2026-05-10'), value: { toString: () => '1000' }, status: 'ATIVO' },
+        {
+          createdAt: new Date('2026-01-10'),
+          signedAt: new Date('2026-05-10'),
+          startDate: new Date('2026-05-12'),
+          value: { toString: () => '1000' },
+          status: 'ATIVO',
+        },
       ],
       [{ createdAt: new Date('2026-05-01'), budgetPlanned: { toString: () => '10000' } }],
       [{ date: new Date('2026-05-15'), amount: { toString: () => '500' }, category: 'COMBUSTIVEL' }],
@@ -39,6 +46,8 @@ describe('ReportsService', () => {
   it('aggregates dashboard metrics', async () => {
     const dashboard = await service.getDashboard('co-1', { months: 6 });
     expect(dashboard.contracts.ativos).toBe(2);
+    expect(dashboard.contracts.totalValueActive).toBe(7500);
+    expect(dashboard.contracts.totalValueInPeriod).toBe(1000);
     expect(dashboard.contracts.assinaturasPendentes).toBe(1);
     expect(dashboard.obras.ativas).toBe(3);
     expect(dashboard.obras.custoTotal).toBe(5000);

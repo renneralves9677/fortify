@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { computeBudgetSummary, computeCommittedFromOrders } from '@features/obras/lib/budget-summary';
+import {
+  computeBudgetSummary,
+  computeCommittedFromOrders,
+  getBudgetCompactLabel,
+  getBudgetGaugeHint,
+} from '@features/obras/lib/budget-summary';
 
 describe('budget-summary', () => {
   it('returns none status when planned is zero', () => {
@@ -39,6 +44,27 @@ describe('budget-summary', () => {
     });
     expect(s.status).toBe('over');
     expect(s.available).toBe(-1000);
+    expect(s.overAmount).toBe(1000);
+    expect(s.projectedPctGauge).toBe(100);
+  });
+
+  it('computes overAmount from committed purchase orders', () => {
+    const s = computeBudgetSummary({
+      budgetPlanned: 500,
+      budgetRealized: 0,
+      purchaseOrders: [
+        {
+          id: 'po-1',
+          number: 'OC-001',
+          payerCnpj: '12345678000199',
+          description: 'Material',
+          amount: 11111.13,
+          receivedAmount: 0,
+          status: 'APROVADA',
+        },
+      ],
+    });
+    expect(s.overAmount).toBeCloseTo(10611.13, 2);
     expect(s.projectedPctGauge).toBe(100);
   });
 
@@ -121,5 +147,26 @@ describe('budget-summary', () => {
     expect(s.byCategory[0].label).toBe('Combustível');
     expect(s.byMonth).toHaveLength(1);
     expect(s.byMonth[0].amount).toBe(1500);
+  });
+
+  it('formats over-budget labels without absurd percentages', () => {
+    const s = computeBudgetSummary({
+      budgetPlanned: 500,
+      budgetRealized: 0,
+      purchaseOrders: [
+        {
+          id: 'po-1',
+          number: 'OC-001',
+          payerCnpj: '12345678000199',
+          description: 'Material',
+          amount: 11111.13,
+          receivedAmount: 0,
+          status: 'APROVADA',
+        },
+      ],
+    });
+    expect(getBudgetGaugeHint(s)).toContain('acima do previsto');
+    expect(getBudgetGaugeHint(s)).not.toContain('%');
+    expect(getBudgetCompactLabel(s)).toBe('Estouro · R$ 10.611,13 acima');
   });
 });

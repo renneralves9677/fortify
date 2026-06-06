@@ -5,12 +5,14 @@ import { PageHeader } from '@shared/components/ui/PageHeader';
 import { Card } from '@shared/components/ui/Card';
 import { Button } from '@shared/components/ui/Button';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { useIsAdmin } from '@/stores/auth-store';
 
 export default function TemplatesPage() {
   const isAdmin = useIsAdmin();
 
-  const { data = [], isLoading, isError } = useQuery({
+  const { data = [], isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['templates'],
     queryFn: async () => (await api.get('/templates')).data,
   });
@@ -32,9 +34,11 @@ export default function TemplatesPage() {
       {isLoading ? (
         <PageSkeleton />
       ) : isError ? (
-        <Card>
-          <p className="text-danger">Não foi possível carregar os templates. Tente novamente.</p>
-        </Card>
+        <QueryErrorState
+          description={getQueryErrorMessage(error)}
+          onRetry={() => refetch()}
+          retrying={isFetching}
+        />
       ) : data.length === 0 ? (
         <Card className="mx-auto max-w-lg text-center">
           <h3 className="text-lg font-semibold text-ink">Nenhum template na sua empresa</h3>

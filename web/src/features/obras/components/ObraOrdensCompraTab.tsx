@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ClipboardList, Clock, Wallet } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { Card } from '@shared/components/ui/Card';
 import { Button } from '@shared/components/ui/Button';
 import { EmptyState } from '@shared/components/ui/EmptyState';
@@ -152,29 +152,6 @@ export function ObraOrdensCompraTab({
         )}
       </Card>
       </ListLoadingOverlay>
-
-      {orders.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Card className="flex items-center gap-3 py-3">
-            <Clock size={18} className="shrink-0 text-ink-muted" aria-hidden />
-            <p className="text-sm text-ink-muted">
-              <strong className="text-ink">{summary.aguardandoAprovacao}</strong> aguardando aprovação
-            </p>
-          </Card>
-          <Card className="flex items-center gap-3 py-3">
-            <Wallet size={18} className="shrink-0 text-ink-muted" aria-hidden />
-            <p className="text-sm text-ink-muted">
-              <strong className="text-ink">{formatCurrency(summary.pendenteRecebimento)}</strong> a receber
-            </p>
-          </Card>
-          <Card className="flex items-center gap-3 py-3">
-            <CheckCircle2 size={18} className="shrink-0 text-ink-muted" aria-hidden />
-            <p className="text-sm text-ink-muted">
-              <strong className="text-ink">{formatCurrency(summary.totalRecebido)}</strong> já recebido
-            </p>
-          </Card>
-        </div>
-      )}
 
       <OrdemCompraDetailModal
         order={selectedOrder}

@@ -19,6 +19,12 @@ export const createObraSchema = z.object({
 
 export type CreateObraInput = z.output<typeof createObraSchema>;
 
+export const updateObraBudgetSchema = z.object({
+  budgetPlanned: z.number().nonnegative(),
+});
+
+export type UpdateObraBudgetInput = z.output<typeof updateObraBudgetSchema>;
+
 export const updateStepSchema = z.object({
   done: z.boolean().optional(),
   title: z.string().min(2).optional(),

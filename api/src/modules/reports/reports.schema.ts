@@ -60,10 +60,10 @@ export function createdAtRangeFilter(range: ReportDateRange) {
   if (!range.from && !range.to) return undefined;
   const createdAt: { gte?: Date; lte?: Date } = {};
   if (range.from) {
-    createdAt.gte = new Date(`${range.from}T00:00:00.000Z`);
+    createdAt.gte = new Date(`${range.from}T00:00:00`);
   }
   if (range.to) {
-    createdAt.lte = new Date(`${range.to}T23:59:59.999Z`);
+    createdAt.lte = new Date(`${range.to}T23:59:59.999`);
   }
   return createdAt;
 }

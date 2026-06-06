@@ -10,6 +10,8 @@ import { Badge } from '@shared/components/ui/Badge';
 import { DataTable } from '@shared/components/ui/DataTable';
 import { EmptyState } from '@shared/components/ui/EmptyState';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { formatCurrency, statusLabels } from '@shared/lib/format';
 import { useIsAdmin } from '@/stores/auth-store';
 import { NovaObraModal } from '@features/obras/components/NovaObraModal';
@@ -32,7 +34,7 @@ export default function ObrasPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['obras'],
     queryFn: async () => (await api.get<ObraListItem[]>('/obras')).data,
   });
@@ -61,6 +63,15 @@ export default function ObrasPage() {
   }, [data, search, statusFilter]);
 
   if (isLoading) return <PageSkeleton />;
+  if (isError) {
+    return (
+      <QueryErrorState
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
 
   return (
     <div>

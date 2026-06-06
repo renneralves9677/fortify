@@ -205,6 +205,18 @@ export function getAuditDetailRows(
     case 'OBRA_NC_CREATE':
       add('Descrição', 'description');
       break;
+    case 'OBRA_BUDGET_UPDATE':
+      add('Orçamento anterior', 'previousBudgetPlanned', (value) =>
+        typeof value === 'number'
+          ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+          : formatAuditValue(value),
+      );
+      add('Novo orçamento', 'budgetPlanned', (value) =>
+        typeof value === 'number'
+          ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+          : formatAuditValue(value),
+      );
+      break;
     default:
       for (const [key, value] of Object.entries(metadata)) {
         if (value === undefined || value === null || value === '') continue;

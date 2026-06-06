@@ -33,6 +33,12 @@ router.post(
 
 router.get('/:id', asyncHandler((req, res) => obrasController.getById(req, res)));
 
+router.patch(
+  '/:id/budget',
+  requireAdmin,
+  asyncHandler((req, res) => obrasController.updateBudget(req, res)),
+);
+
 router.get(
   '/:id/audit',
   requireAdmin,

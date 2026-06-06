@@ -6,6 +6,8 @@ import { Card } from '@shared/components/ui/Card';
 import { Button } from '@shared/components/ui/Button';
 import { Input } from '@shared/components/ui/Input';
 import { PageLoader } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage, isNotFoundError } from '@shared/lib/query-errors';
 import { DocumentViewer } from '@features/signatures/components/DocumentViewer';
 import { PdfDocumentViewer } from '@features/signatures/components/PdfDocumentViewer';
 import { SignatureTimeline } from '@features/signatures/components/SignatureTimeline';
@@ -30,7 +32,7 @@ export default function PublicSignPage() {
   const [signPanelOpen, setSignPanelOpen] = useState(false);
   const [activeFieldKey, setActiveFieldKey] = useState<string | null>(null);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['public-sign', token],
     queryFn: async () => (await api.get(`/signatures/public/${token}`)).data,
     enabled: !!token,
@@ -123,11 +125,21 @@ export default function PublicSignPage() {
   };
 
   if (isLoading) return <PageLoader label="Preparando assinatura…" />;
-  if (error) {
-    const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+  if (isError) {
+    const notFound = isNotFoundError(error);
     return (
-      <div className="flex min-h-screen items-center justify-center p-6 text-center text-danger">
-        {msg ?? 'Link inválido ou expirado'}
+      <div className="flex min-h-screen items-center justify-center bg-surface p-6">
+        <QueryErrorState
+          compact
+          title={notFound ? 'Link inválido ou expirado' : 'Não foi possível carregar a assinatura'}
+          description={
+            notFound
+              ? 'Solicite um novo link ao responsável pelo contrato.'
+              : getQueryErrorMessage(error)
+          }
+          onRetry={() => refetch()}
+          retrying={isFetching}
+        />
       </div>
     );
   }

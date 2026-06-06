@@ -13,11 +13,12 @@ export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
   async listUsersForCompany(companyId: string, query: ListUsersQuery) {
-    const { page, pageSize, search } = query;
+    const { page, pageSize, search, role, active } = query;
     const { skip, take } = paginationBounds(page, pageSize);
+    const filters = { search, role, active };
     const [items, total] = await Promise.all([
-      this.usersRepository.findManyByCompany(companyId, { search, skip, take }),
-      this.usersRepository.countByCompany(companyId, search),
+      this.usersRepository.findManyByCompany(companyId, { ...filters, skip, take }),
+      this.usersRepository.countByCompany(companyId, filters),
     ]);
     return paginatedResult(items, total, page, pageSize);
   }

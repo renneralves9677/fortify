@@ -9,8 +9,8 @@ import { Input } from '@shared/components/ui/Input';
 import { AuthLayout } from '@features/auth/components/AuthLayout';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@demo.fortify.local');
-  const [password, setPassword] = useState('demo123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);

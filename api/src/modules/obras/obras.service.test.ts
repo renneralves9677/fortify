@@ -124,6 +124,13 @@ class FakeObrasRepository implements ObrasRepositoryPort {
     return Promise.resolve({ count: 1 });
   }
 
+  updateBudgetForCompany(id: string, companyId: string, budgetPlanned: number) {
+    const obra = this.obras.find((o) => o.id === id && o.companyId === companyId);
+    if (!obra || obra.status === 'encerrada') return Promise.resolve({ count: 0 });
+    obra.budgetPlanned = budgetPlanned;
+    return Promise.resolve({ count: 1 });
+  }
+
   findAuditLogsForObra(_obraId: string, _companyId: string) {
     return Promise.resolve([]);
   }
@@ -205,6 +212,29 @@ describe('ObrasService steps and audit', () => {
     await expect(
       service.createStep('obra-1', 'co-1', 'user-1', { title: 'Nova etapa' }),
     ).rejects.toBeInstanceOf(AppError);
+  });
+
+  it('updates budget on active obra', async () => {
+    const { logAudit } = await import('../../middleware/audit.js');
+    const obra = await service.updateObraBudget('obra-1', 'co-1', 'user-1', {
+      budgetPlanned: 25000,
+    });
+    expect(obra.budgetPlanned).toBe(25000);
+    expect(logAudit).toHaveBeenCalledWith(
+      'co-1',
+      'user-1',
+      'OBRA_BUDGET_UPDATE',
+      'Obra',
+      'obra-1',
+      expect.objectContaining({ budgetPlanned: 25000, previousBudgetPlanned: 1000 }),
+    );
+  });
+
+  it('blocks budget update on closed obra', async () => {
+    repo.obras[0].status = 'encerrada';
+    await expect(
+      service.updateObraBudget('obra-1', 'co-1', 'user-1', { budgetPlanned: 25000 }),
+    ).rejects.toMatchObject({ code: 'OBRA_CLOSED' });
   });
 
   it('logs audit when adding direct custo', async () => {

@@ -5,6 +5,8 @@ import { DataTable } from '@shared/components/ui/DataTable';
 import { Button } from '@shared/components/ui/Button';
 import { EmptyState } from '@shared/components/ui/EmptyState';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { ExportReportModal } from '@shared/components/reports/ExportReportModal';
 import type { DatePeriodValue } from '@shared/components/reports/DatePeriodFilter';
 import { isDatePeriodInvalid } from '@shared/components/reports/DatePeriodFilter';
@@ -30,7 +32,7 @@ export function ReportsObrasTab({ period }: ReportsObrasTabProps) {
     setPage(1);
   }, [period.from, period.to]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['report-obras', page, period.from, period.to],
     queryFn: () =>
       fetchReportList<ObraReportRow>('obras', {
@@ -43,6 +45,16 @@ export function ReportsObrasTab({ period }: ReportsObrasTabProps) {
   });
 
   if (isLoading && !data) return <PageSkeleton />;
+  if (isError && !data) {
+    return (
+      <QueryErrorState
+        compact
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
 
   const items = data?.items ?? [];
 

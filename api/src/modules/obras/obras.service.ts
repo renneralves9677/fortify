@@ -10,6 +10,7 @@ import type {
   CreateVistoriaInput,
   ObraReportQuery,
   ReorderStepsInput,
+  UpdateObraBudgetInput,
   UpdateStepInput,
 } from './obras.schema.js';
 import { DEFAULT_OBRA_STEPS } from './obras.repository.js';
@@ -145,6 +146,32 @@ export class ObrasService {
         };
       }),
     };
+  }
+
+  async updateObraBudget(
+    id: string,
+    companyId: string,
+    userId: string | undefined,
+    input: UpdateObraBudgetInput,
+  ) {
+    const obra = await getObraOrThrow(this.obrasRepository, id, companyId);
+    assertObraActive(obra);
+
+    const result = await this.obrasRepository.updateBudgetForCompany(
+      id,
+      companyId,
+      input.budgetPlanned,
+    );
+    if (!result.count) {
+      throw new AppError(400, 'Obra encerrada — operação não permitida', 'OBRA_CLOSED');
+    }
+
+    await logAudit(companyId, userId, 'OBRA_BUDGET_UPDATE', 'Obra', id, {
+      budgetPlanned: input.budgetPlanned,
+      previousBudgetPlanned: Number(obra.budgetPlanned),
+    });
+
+    return this.getObraById(id, companyId);
   }
 
   getCloseReadiness(id: string, companyId: string) {

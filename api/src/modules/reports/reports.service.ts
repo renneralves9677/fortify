@@ -18,6 +18,7 @@ import {
   aggregateCategoryShares,
   aggregateContractsMonthly,
   aggregateObrasMonthly,
+  filterContractsInDashboardPeriod,
   monthKeysFromRange,
 } from '../../domain/reports/dashboard-aggregates.js';
 import { getCategoryLabel } from '../../domain/obras/cost-categories.js';
@@ -38,14 +39,16 @@ export class ReportsService {
         : defaultDashboardRange(query.months);
 
     const [
-      [contractsByStatus, obrasAtivas, assinaturasPendentes, custoAggAll],
-      [contractsInPeriod, obrasInPeriod, custosInPeriod, purchaseOrders, budgetAgg],
+      [contractsByStatus, obrasAtivas, assinaturasPendentes, custoAggAll, activeContractsValueAgg],
+      [contractsForPeriod, obrasInPeriod, custosInPeriod, purchaseOrders, budgetAgg],
       executive,
     ] = await Promise.all([
       this.reportsRepository.getDashboardMetrics(companyId),
       this.reportsRepository.getDashboardPeriodData(companyId, range),
       this.reportsRepository.getExecutiveMetrics(companyId),
     ]);
+
+    const contractsInPeriod = filterContractsInDashboardPeriod(contractsForPeriod, range);
 
     const monthKeys = monthKeysFromRange(range, query.months);
     const contractsMonthly = aggregateContractsMonthly(contractsInPeriod, monthKeys);
@@ -76,6 +79,7 @@ export class ReportsService {
       contracts: {
         ativos: contratosAtivos,
         assinaturasPendentes,
+        totalValueActive: Number(activeContractsValueAgg._sum.value ?? 0),
         createdInPeriod: contractsInPeriod.length,
         totalValueInPeriod: contractsInPeriod.reduce((s, c) => s + Number(c.value), 0),
         byStatus: contractsByStatus.map((c) => ({ status: c.status, count: c._count })),

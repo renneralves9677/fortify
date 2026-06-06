@@ -60,13 +60,19 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       <AlertDialog open={open} onOpenChange={(v) => !v && finish(false)}>
         <AlertDialogContent className={cn(options?.body && 'flex max-h-[min(90vh,640px)] flex-col')}>
           <AlertDialogHeader className="shrink-0">
-            <AlertDialogTitle>{options?.title}</AlertDialogTitle>
-            {options?.description && !options?.body && (
+            <AlertDialogTitle>{options?.title ?? 'Confirmar ação'}</AlertDialogTitle>
+            {options?.description && !options?.body ? (
               typeof options.description === 'string' ? (
                 <AlertDialogDescription>{options.description}</AlertDialogDescription>
               ) : (
-                <div className="text-sm text-muted-foreground">{options.description}</div>
+                <AlertDialogDescription asChild>
+                  <div>{options.description}</div>
+                </AlertDialogDescription>
               )
+            ) : (
+              <AlertDialogDescription className="sr-only">
+                Confirme ou cancele esta ação.
+              </AlertDialogDescription>
             )}
           </AlertDialogHeader>
           {options?.body && (

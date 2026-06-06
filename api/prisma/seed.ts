@@ -1,6 +1,6 @@
 import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { provisionDefaultTemplates } from '../src/domain/contracts/provision-default-templates.js';
+import { provisionDefaultTemplates } from '../src/modules/templates/templates-provision.repository.js';
 
 const prisma = new PrismaClient();
 

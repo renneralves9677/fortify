@@ -29,6 +29,7 @@ const LoginPage = lazy(() => import('@features/auth/pages/LoginPage'));
 const SignupPage = lazy(() => import('@features/auth/pages/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('@features/auth/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@features/auth/pages/ResetPasswordPage'));
+const NotFoundPage = lazy(() => import('@features/errors/pages/NotFoundPage'));
 
 export function AppRouter() {
   return (
@@ -66,9 +67,10 @@ export function AppRouter() {
                 <Route element={<AdminRoute />}>
                   <Route path="usuarios" element={<UsersPage />} />
                 </Route>
+                <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

@@ -13,6 +13,8 @@ import { api } from '@shared/lib/api';
 import { PageHeader } from '@shared/components/ui/PageHeader';
 import { Card } from '@shared/components/ui/Card';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/components/ui/tabs';
 import { Select } from '@shared/components/ui/Input';
 import { formatCurrency } from '@shared/lib/format';
@@ -36,7 +38,7 @@ export default function DashboardPage() {
 
   const period = useMemo(() => buildDashboardPeriod(preset), [preset]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['dashboard', period.from, period.to, period.months],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -48,7 +50,17 @@ export default function DashboardPage() {
     },
   });
 
-  if (isLoading || !data) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton />;
+  if (isError) {
+    return (
+      <QueryErrorState
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
+  if (!data) return <PageSkeleton />;
 
   return (
     <div>
@@ -57,7 +69,7 @@ export default function DashboardPage() {
         description="Indicadores de contratos e obras"
         breadcrumbs={false}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-end gap-2">
             <Select
               label="Período"
               value={preset}
@@ -72,7 +84,7 @@ export default function DashboardPage() {
             </Select>
             <Link
               to="/relatorios"
-              className="inline-flex items-center gap-1.5 rounded-control border border-border px-3 py-2 text-sm text-ink-muted transition-colors hover:border-brand/40 hover:text-ink"
+              className="inline-flex h-9 items-center gap-1.5 rounded-control border border-input bg-background px-3 text-sm font-medium text-ink-muted transition-colors hover:border-brand/40 hover:bg-muted hover:text-ink"
             >
               <BarChart3 size={16} aria-hidden />
               Relatórios
@@ -80,25 +92,6 @@ export default function DashboardPage() {
           </div>
         }
       />
-
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="py-3 text-sm">
-          <p className="text-ink-muted">Contratos ativos</p>
-          <p className="font-medium">{data.contracts.ativos}</p>
-        </Card>
-        <Card className="py-3 text-sm">
-          <p className="text-ink-muted">Assinaturas pendentes</p>
-          <p className="font-medium">{data.contracts.assinaturasPendentes}</p>
-        </Card>
-        <Card className="py-3 text-sm">
-          <p className="text-ink-muted">Obras ativas</p>
-          <p className="font-medium">{data.obras.ativas}</p>
-        </Card>
-        <Card className="py-3 text-sm">
-          <p className="text-ink-muted">Custos no período</p>
-          <p className="font-medium">{formatCurrency(data.obras.custoRealizado)}</p>
-        </Card>
-      </div>
 
       {isAdmin && (data.alerts.pendingApprovals > 0 || data.alerts.contractsInWorkflow > 0) && (
         <div className="mb-6 grid gap-3 sm:grid-cols-2">

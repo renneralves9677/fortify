@@ -20,6 +20,7 @@ export type BudgetSummary = {
   committed: number;
   projected: number;
   available: number;
+  overAmount: number;
   usagePct: number | null;
   projectedPct: number | null;
   projectedPctGauge: number;
@@ -96,6 +97,7 @@ export function computeBudgetSummary(input: {
   const committed = computeCommittedFromOrders(input.purchaseOrders ?? []);
   const projected = realized + committed;
   const available = planned > 0 ? planned - projected : 0;
+  const overAmount = planned > 0 ? Math.max(0, projected - planned) : 0;
 
   const usagePct = planned > 0 ? (realized / planned) * 100 : null;
   const projectedPct = planned > 0 ? (projected / planned) * 100 : null;
@@ -108,6 +110,7 @@ export function computeBudgetSummary(input: {
     committed,
     projected,
     available,
+    overAmount,
     usagePct,
     projectedPct,
     projectedPctGauge,
@@ -128,4 +131,28 @@ export function getBudgetStatusLabel(status: BudgetStatus): string {
     default:
       return 'Sem orçamento definido';
   }
+}
+
+export function getBudgetGaugeHint(summary: BudgetSummary): string {
+  if (summary.overAmount > 0) {
+    return `${formatBudgetCurrency(summary.overAmount)} acima do previsto`;
+  }
+  if (summary.projectedPct != null) {
+    return `${summary.projectedPct.toFixed(0)}% do orçamento em uso`;
+  }
+  return '0% do orçamento em uso';
+}
+
+export function getBudgetCompactLabel(summary: BudgetSummary): string {
+  if (summary.planned <= 0) {
+    return `${formatBudgetCurrency(summary.realized)} realizado`;
+  }
+  if (summary.overAmount > 0) {
+    return `Estouro · ${formatBudgetCurrency(summary.overAmount)} acima`;
+  }
+  return `${summary.projectedPct?.toFixed(0) ?? 0}% do previsto`;
+}
+
+function formatBudgetCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 }

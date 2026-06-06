@@ -9,6 +9,8 @@ import { Button } from '@shared/components/ui/Button';
 import { Select } from '@shared/components/ui/Input';
 import { EmptyState } from '@shared/components/ui/EmptyState';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { statusLabels } from '@shared/lib/format';
 import type { PaginatedResponse } from '@shared/types/pagination';
 import {
@@ -72,7 +74,7 @@ export default function SignaturesPage() {
     setPage(1);
   }, [search, statusFilter, progressFilter]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['signatures-queue', page, search, statusFilter, progressFilter],
     queryFn: async () =>
       (
@@ -89,6 +91,21 @@ export default function SignaturesPage() {
   });
 
   if (isLoading && !data) return <PageSkeleton />;
+  if (isError && !data) {
+    return (
+      <div>
+        <PageHeader
+          title="Assinaturas"
+          description="Acompanhe fluxos de assinatura por status, progresso e signatário"
+        />
+        <QueryErrorState
+          description={getQueryErrorMessage(error)}
+          onRetry={() => refetch()}
+          retrying={isFetching}
+        />
+      </div>
+    );
+  }
 
   const items = data?.items ?? [];
   const hasActiveFilters =

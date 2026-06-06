@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CircleDollarSign,
   ClipboardList,
+  Pencil,
   PiggyBank,
   Receipt,
   TrendingDown,
@@ -11,13 +12,27 @@ import {
 import { Card } from '@shared/components/ui/Card';
 import { Badge } from '@shared/components/ui/Badge';
 import { Button } from '@shared/components/ui/Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@shared/components/ui/dialog';
 import type { ObraCusto, ObraPurchaseOrder } from '@features/obras/types';
 import {
   computeBudgetSummary,
+  getBudgetGaugeHint,
   getBudgetStatusLabel,
   type BudgetStatus,
 } from '@features/obras/lib/budget-summary';
-import { formatCurrency } from '@shared/lib/format';
+import {
+  formatCurrency,
+  formatCurrencyInputFromNumber,
+  parseCurrencyInput,
+} from '@shared/lib/format';
+import { CurrencyInput } from '@shared/components/ui/CurrencyInput';
 import { cn } from '@shared/lib/cn';
 
 type ObraBudgetOverviewProps = {
@@ -26,7 +41,10 @@ type ObraBudgetOverviewProps = {
   custos?: ObraCusto[];
   purchaseOrders?: ObraPurchaseOrder[];
   compact?: boolean;
+  canEdit?: boolean;
+  budgetUpdating?: boolean;
   onGoToCustos?: () => void;
+  onBudgetUpdate?: (budgetPlanned: number) => void;
 };
 
 function statusBadgeVariant(status: BudgetStatus): 'success' | 'warning' | 'destructive' | 'muted' {
@@ -45,10 +63,12 @@ function statusBadgeVariant(status: BudgetStatus): 'success' | 'warning' | 'dest
 function BudgetGauge({
   pct,
   status,
+  isOver,
   size = 'lg',
 }: {
   pct: number;
   status: BudgetStatus;
+  isOver?: boolean;
   size?: 'lg' | 'sm';
 }) {
   const dim = size === 'lg' ? 140 : 96;
@@ -90,8 +110,14 @@ function BudgetGauge({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className={cn('font-semibold tabular-nums text-ink', size === 'lg' ? 'text-2xl' : 'text-lg')}>
-          {pct.toFixed(0)}%
+        <span
+          className={cn(
+            'font-semibold text-ink',
+            isOver ? 'text-base uppercase tracking-wide' : 'tabular-nums',
+            size === 'lg' ? (isOver ? 'text-lg' : 'text-2xl') : isOver ? 'text-sm' : 'text-lg',
+          )}
+        >
+          {isOver ? 'Estouro' : `${pct.toFixed(0)}%`}
         </span>
         <span className="text-xs text-ink-muted">projetado</span>
       </div>
@@ -141,36 +167,54 @@ function StackedBudgetBar({
 }) {
   if (planned <= 0) return null;
 
-  const base = planned;
+  const isOver = projected > planned;
+  const base = isOver ? projected : planned;
   const realizedPct = Math.min((realized / base) * 100, 100);
   const committedPct = Math.min((committed / base) * 100, 100 - realizedPct);
-  const overPct =
-    projected > planned ? Math.min(((projected - planned) / base) * 100, 50) : 0;
+  const plannedMarkerPct = isOver ? Math.min((planned / base) * 100, 100) : null;
+  const withinCommittedPct =
+    isOver && plannedMarkerPct != null
+      ? Math.max(0, Math.min(committedPct, plannedMarkerPct - realizedPct))
+      : committedPct;
+  const overBarPct =
+    isOver && plannedMarkerPct != null ? Math.max(0, 100 - plannedMarkerPct) : 0;
 
   return (
     <div className="space-y-2">
-      <div className="relative">
+      <div className="relative overflow-hidden rounded-full">
         <div className="relative h-3 overflow-hidden rounded-full bg-muted">
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-brand transition-all"
             style={{ width: `${realizedPct}%` }}
           />
-          <div
-            className="absolute inset-y-0 rounded-full bg-brand/35 transition-all"
-            style={{
-              left: `${realizedPct}%`,
-              width: `${committedPct}%`,
-              backgroundImage:
-                'repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 6px)',
-            }}
-          />
+          {withinCommittedPct > 0 && (
+            <div
+              className="absolute inset-y-0 rounded-full bg-brand/35 transition-all"
+              style={{
+                left: `${realizedPct}%`,
+                width: `${withinCommittedPct}%`,
+                backgroundImage:
+                  'repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 6px)',
+              }}
+            />
+          )}
+          {isOver && overBarPct > 0 && (
+            <div
+              className="absolute inset-y-0 rounded-r-full bg-danger transition-all"
+              style={{
+                left: `${plannedMarkerPct}%`,
+                width: `${overBarPct}%`,
+              }}
+            />
+          )}
+          {isOver && (
+            <div
+              className="absolute inset-y-0 w-0.5 bg-background shadow-sm"
+              style={{ left: `${plannedMarkerPct}%` }}
+              title={`Orçamento previsto: ${formatCurrency(planned)}`}
+            />
+          )}
         </div>
-        {overPct > 0 && (
-          <div
-            className="absolute top-0 h-3 rounded-r-full bg-danger transition-all"
-            style={{ left: '100%', width: `${overPct}%` }}
-          />
-        )}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
         <span className="flex items-center gap-1.5">
@@ -181,11 +225,20 @@ function StackedBudgetBar({
           <span className="inline-block h-2 w-2 rounded-full bg-brand/40" />
           Comprometido (O.C.)
         </span>
-        {projected > planned && (
-          <span className="flex items-center gap-1.5 text-danger">
-            <span className="inline-block h-2 w-2 rounded-full bg-danger" />
-            Acima do previsto
-          </span>
+        {isOver && (
+          <>
+            <span className="flex items-center gap-1.5 text-danger">
+              <span className="inline-block h-2 w-2 rounded-full bg-danger" />
+              Acima do previsto
+            </span>
+            <span className="flex items-center gap-1.5 text-danger">
+              <span className="inline-block h-2 w-0.5 rounded-full bg-background ring-1 ring-danger" />
+              Limite previsto
+            </span>
+            <span className="text-ink-muted">
+              Escala pelo projetado ({formatCurrency(projected)})
+            </span>
+          </>
         )}
       </div>
     </div>
@@ -198,8 +251,20 @@ export function ObraBudgetOverview({
   custos = [],
   purchaseOrders = [],
   compact = false,
+  canEdit = false,
+  budgetUpdating = false,
   onGoToCustos,
+  onBudgetUpdate,
 }: ObraBudgetOverviewProps) {
+  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
+
+  useEffect(() => {
+    if (budgetDialogOpen) {
+      setBudgetInput(budgetPlanned > 0 ? formatCurrencyInputFromNumber(budgetPlanned) : '');
+    }
+  }, [budgetDialogOpen, budgetPlanned]);
+
   const summary = useMemo(
     () =>
       computeBudgetSummary({
@@ -213,37 +278,88 @@ export function ObraBudgetOverview({
 
   const statusLabel = getBudgetStatusLabel(summary.status);
   const maxMonth = Math.max(...summary.byMonth.map((m) => m.amount), 1);
+  const gaugeHint = getBudgetGaugeHint(summary);
+  const canEditBudget = canEdit && !!onBudgetUpdate;
+
+  function handleBudgetSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const amount = parseCurrencyInput(budgetInput);
+    if (amount < 0) return;
+    onBudgetUpdate?.(amount);
+    setBudgetDialogOpen(false);
+  }
+
+  const budgetDialog = canEditBudget ? (
+    <Dialog open={budgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
+      <DialogContent className="max-w-sm">
+        <form onSubmit={handleBudgetSubmit}>
+          <DialogHeader>
+            <DialogTitle>Orçamento previsto</DialogTitle>
+            <DialogDescription>
+              Valor de referência para o controle orçamentário desta obra.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <CurrencyInput
+              label="Valor (R$)"
+              value={budgetInput}
+              onChange={setBudgetInput}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setBudgetDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" loading={budgetUpdating}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
   if (summary.planned <= 0) {
     return (
-      <Card className="border-dashed">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-              Controle orçamentário
-            </p>
-            <p className="mt-1 text-lg font-semibold text-ink">Orçamento não definido</p>
-            <p className="mt-1 text-sm text-ink-muted">
-              Total realizado: <strong className="text-ink">{formatCurrency(summary.realized)}</strong>
-              {summary.committed > 0 && (
-                <>
-                  {' '}
-                  · Comprometido: <strong className="text-ink">{formatCurrency(summary.committed)}</strong>
-                </>
+      <>
+        <Card className="border-dashed">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+                Controle orçamentário
+              </p>
+              <p className="mt-1 text-lg font-semibold text-ink">Orçamento não definido</p>
+              <p className="mt-1 text-sm text-ink-muted">
+                Total realizado: <strong className="text-ink">{formatCurrency(summary.realized)}</strong>
+                {summary.committed > 0 && (
+                  <>
+                    {' '}
+                    · Comprometido: <strong className="text-ink">{formatCurrency(summary.committed)}</strong>
+                  </>
+                )}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {canEditBudget && (
+                <Button variant="secondary" size="sm" onClick={() => setBudgetDialogOpen(true)}>
+                  Definir orçamento
+                </Button>
               )}
-            </p>
+              {onGoToCustos && summary.realized > 0 && (
+                <Button variant="secondary" size="sm" onClick={onGoToCustos}>
+                  Ver lançamentos
+                </Button>
+              )}
+            </div>
           </div>
-          {onGoToCustos && summary.realized > 0 && (
-            <Button variant="secondary" size="sm" onClick={onGoToCustos}>
-              Ver lançamentos
-            </Button>
-          )}
-        </div>
-      </Card>
+        </Card>
+        {budgetDialog}
+      </>
     );
   }
 
   return (
+    <>
     <Card className={cn(compact ? 'py-4' : 'py-5')}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -272,24 +388,41 @@ export function ObraBudgetOverview({
           <BudgetGauge
             pct={summary.projectedPctGauge}
             status={summary.status}
+            isOver={summary.status === 'over'}
             size={compact ? 'sm' : 'lg'}
           />
           {!compact && (
-            <p className="max-w-[10rem] text-center text-xs text-ink-muted">
-              {summary.projectedPct != null && summary.projectedPct > 100
-                ? `${(summary.projectedPct - 100).toFixed(0)}% acima do previsto`
-                : `${summary.projectedPct?.toFixed(0) ?? 0}% do orçamento em uso`}
-            </p>
+            <p className="max-w-[12rem] text-center text-xs text-ink-muted">{gaugeHint}</p>
           )}
         </div>
 
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <MetricRow
-              icon={<CircleDollarSign size={18} aria-hidden />}
-              label="Orçamento previsto"
-              value={formatCurrency(summary.planned)}
-            />
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                <CircleDollarSign size={18} aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+                    Orçamento previsto
+                  </p>
+                  {canEditBudget && (
+                    <button
+                      type="button"
+                      className="rounded p-0.5 text-ink-muted transition-colors hover:bg-muted hover:text-ink"
+                      aria-label="Editar orçamento previsto"
+                      onClick={() => setBudgetDialogOpen(true)}
+                    >
+                      <Pencil size={14} aria-hidden />
+                    </button>
+                  )}
+                </div>
+                <p className="mt-0.5 text-base font-semibold tabular-nums text-ink">
+                  {formatCurrency(summary.planned)}
+                </p>
+              </div>
+            </div>
             <MetricRow
               icon={<Receipt size={18} aria-hidden />}
               label="Realizado"
@@ -404,5 +537,8 @@ export function ObraBudgetOverview({
         </div>
       )}
     </Card>
+
+    {budgetDialog}
+    </>
   );
 }

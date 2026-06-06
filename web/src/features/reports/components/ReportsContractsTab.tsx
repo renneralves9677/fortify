@@ -7,6 +7,8 @@ import { Badge } from '@shared/components/ui/Badge';
 import { Button } from '@shared/components/ui/Button';
 import { EmptyState } from '@shared/components/ui/EmptyState';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { ExportReportModal } from '@shared/components/reports/ExportReportModal';
 import type { DatePeriodValue } from '@shared/components/reports/DatePeriodFilter';
 import { isDatePeriodInvalid } from '@shared/components/reports/DatePeriodFilter';
@@ -32,7 +34,7 @@ export function ReportsContractsTab({ period }: ReportsContractsTabProps) {
     setPage(1);
   }, [period.from, period.to]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['report-contracts', page, period.from, period.to],
     queryFn: () =>
       fetchReportList<ContractReportRow>('contracts', {
@@ -45,6 +47,16 @@ export function ReportsContractsTab({ period }: ReportsContractsTabProps) {
   });
 
   if (isLoading && !data) return <PageSkeleton />;
+  if (isError && !data) {
+    return (
+      <QueryErrorState
+        compact
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
 
   const items = data?.items ?? [];
 

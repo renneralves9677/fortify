@@ -7,6 +7,8 @@ import { Card } from '@shared/components/ui/Card';
 import { Button } from '@shared/components/ui/Button';
 import { Input, Textarea } from '@shared/components/ui/Input';
 import { PageSkeleton } from '@shared/components/ui/PageLoader';
+import { QueryErrorState } from '@shared/components/ui/QueryErrorState';
+import { getQueryErrorMessage } from '@shared/lib/query-errors';
 import { TemplatePreviewPanel } from '@features/contracts/components/TemplatePreviewPanel';
 import {
   createFromPreset,
@@ -24,7 +26,7 @@ export default function NewTemplatePage() {
   const [bodyHtml, setBodyHtml] = useState('');
   const [fields, setFields] = useState<TemplateField[]>([]);
 
-  const { data: catalog = [], isLoading } = useQuery({
+  const { data: catalog = [], isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['template-catalog'],
     queryFn: fetchDefaultCatalog,
   });
@@ -61,6 +63,15 @@ export default function NewTemplatePage() {
   }
 
   if (isLoading) return <PageSkeleton />;
+  if (isError) {
+    return (
+      <QueryErrorState
+        description={getQueryErrorMessage(error)}
+        onRetry={() => refetch()}
+        retrying={isFetching}
+      />
+    );
+  }
 
   return (
     <div>

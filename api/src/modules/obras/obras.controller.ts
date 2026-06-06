@@ -13,6 +13,7 @@ import {
   obraReportQuerySchema,
   obraStepParamsSchema,
   reorderStepsSchema,
+  updateObraBudgetSchema,
   updateStepSchema,
 } from './obras.schema.js';
 import type { ObrasService } from './obras.service.js';
@@ -43,6 +44,18 @@ export class ObrasController {
   async getById(req: AuthRequest, res: Response): Promise<void> {
     const { id } = parseParams(obraIdParamSchema, req.params);
     const obra = await this.obrasService.getObraById(id, req.companyId!);
+    res.json(obra);
+  }
+
+  async updateBudget(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = parseParams(obraIdParamSchema, req.params);
+    const input = parseBody(updateObraBudgetSchema, req.body);
+    const obra = await this.obrasService.updateObraBudget(
+      id,
+      req.companyId!,
+      req.user?.userId,
+      input,
+    );
     res.json(obra);
   }
 

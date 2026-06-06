@@ -18,6 +18,21 @@ function obraWhere(companyId: string, range: ReportDateRange) {
   };
 }
 
+const ACTIVE_CONTRACT_STATUSES = ['ASSINADO', 'ATIVO', 'VENCENDO'] as const;
+
+const DASHBOARD_CONTRACT_STATUSES = [
+  'RASCUNHO',
+  'REVISAO',
+  'APROVACAO',
+  'ENVIO',
+  'AGUARDANDO_ASSINATURA',
+  'ASSINADO',
+  'ATIVO',
+  'VENCENDO',
+  'RENOVACAO',
+  'ENCERRADO',
+] as const;
+
 const contractReportSelect = {
   id: true,
   title: true,
@@ -49,16 +64,16 @@ export class ReportsRepository {
         where: { obra: { companyId } },
         _sum: { amount: true },
       }),
+      prisma.contract.aggregate({
+        where: { companyId, status: { in: [...ACTIVE_CONTRACT_STATUSES] } },
+        _sum: { value: true },
+      }),
     ]);
   }
 
   getDashboardPeriodData(companyId: string, range: ReportDateRange) {
     const createdAt = createdAtRangeFilter(range);
     const custoDate = createdAtRangeFilter(range);
-    const contractPeriodWhere = {
-      companyId,
-      ...(createdAt ? { createdAt } : {}),
-    };
     const custoWhere = {
       obra: { companyId },
       ...(custoDate ? { date: custoDate } : {}),
@@ -70,8 +85,17 @@ export class ReportsRepository {
 
     return Promise.all([
       prisma.contract.findMany({
-        where: contractPeriodWhere,
-        select: { createdAt: true, value: true, status: true },
+        where: {
+          companyId,
+          status: { in: [...DASHBOARD_CONTRACT_STATUSES] },
+        },
+        select: {
+          createdAt: true,
+          signedAt: true,
+          startDate: true,
+          value: true,
+          status: true,
+        },
       }),
       prisma.obra.findMany({
         where: obraPeriodWhere,
