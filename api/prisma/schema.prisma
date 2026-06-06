@@ -1,0 +1,685 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum ContractType {
+  SERVICO
+  TRABALHO
+  OBRA
+  LOCACAO
+}
+
+enum ContractStatus {
+  RASCUNHO
+  REVISAO
+  APROVACAO
+  ENVIO
+  AGUARDANDO_ASSINATURA
+  ASSINADO
+  ATIVO
+  VENCENDO
+  RENOVACAO
+  ENCERRADO
+  EXPIRADO
+  ARQUIVADO
+  CANCELADO
+}
+
+enum SignatureChannel {
+  EMAIL
+  WHATSAPP
+  AMBOS
+}
+
+enum SignatureStatus {
+  PENDENTE
+  ASSINADO
+  EXPIRADO
+}
+
+enum SignatureFlowStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum SignatureFlowMode {
+  SEQUENTIAL
+  PARALLEL
+}
+
+enum ContractSignerStatus {
+  WAITING
+  PENDING
+  VIEWED
+  SIGNED
+  DECLINED
+  EXPIRED
+}
+
+enum SignatureEventType {
+  FLOW_STARTED
+  DOCUMENT_FROZEN
+  LINK_SENT
+  LINK_OPENED
+  CONSENT_ACCEPTED
+  SIGNATURE_APPLIED
+  SIGNER_ACTIVATED
+  FLOW_COMPLETED
+  FLOW_CANCELLED
+  LINK_EXPIRED
+  DOCUMENT_GENERATED
+}
+
+enum ContractDocumentType {
+  FROZEN_PDF
+  SIGNED_PDF
+}
+
+enum ObraPhase {
+  PLANEJAMENTO
+  EXECUCAO
+  ENTREGA
+}
+
+enum VistoriaType {
+  INICIAL
+  INTERMEDIARIA
+  FINAL
+  MANUTENCAO
+}
+
+enum PurchaseOrderStatus {
+  RASCUNHO
+  EMITIDA
+  APROVADA
+  RECEBIDA_PARCIAL
+  RECEBIDA
+  CANCELADA
+  ENCERRADA
+}
+
+enum ObraCostCategory {
+  COMPRA_MATERIAL
+  CONTRATACAO_SERVICO
+  EQUIPAMENTO
+  COMBUSTIVEL
+  PEDAGIO
+  DESPESA_ADMINISTRATIVA
+  REEMBOLSO_FUNCIONARIO
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalStepStatus {
+  WAITING
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PurchaseRequestStatus {
+  RASCUNHO
+  COTACAO
+  APROVACAO
+  APROVADA
+  CANCELADA
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users              User[]
+  contracts          Contract[]
+  templates          ContractTemplate[]
+  obras              Obra[]
+  purchaseOrders     PurchaseOrder[]
+  auditLogs          AuditLog[]
+  purchaseRequests   PurchaseRequest[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  companyId    String
+  email        String
+  passwordHash String
+  name         String
+  role         UserRole @default(OPERATOR)
+  isOwner      Boolean  @default(false)
+  active       Boolean  @default(true)
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  consent UserConsent?
+  passwordResets PasswordReset[]
+  refreshTokens RefreshToken[]
+
+  @@unique([companyId, email])
+}
+
+/// Refresh token de sessão (hash SHA-256; rotação a cada renovação).
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Cadastro pendente: guarda os dados da conta até o e-mail ser confirmado por código.
+model EmailVerification {
+  id             String    @id @default(uuid())
+  email          String
+  name           String
+  companyName    String
+  companyCnpj    String
+  passwordHash   String
+  code           String
+  termsVersion   String
+  privacyVersion String
+  attempts       Int       @default(0)
+  expiresAt      DateTime
+  verifiedAt     DateTime?
+  consumedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([email])
+}
+
+/// Recuperação de senha: código enviado por e-mail e, após validado, token do link de redefinição.
+model PasswordReset {
+  id             String    @id @default(uuid())
+  userId         String
+  email          String
+  code           String
+  token          String?   @unique
+  attempts       Int       @default(0)
+  codeVerifiedAt DateTime?
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserConsent {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  termsVersion   String
+  privacyVersion String
+  acceptedAt     DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ContractTemplate {
+  id          String       @id @default(uuid())
+  companyId   String
+  name        String
+  type        ContractType
+  description String?
+  bodyHtml    String       @db.Text
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  company   Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fields    ContractTemplateField[]
+  versions  ContractTemplateVersion[]
+  contracts Contract[]
+}
+
+model ContractTemplateVersion {
+  id             String       @id @default(uuid())
+  templateId     String
+  versionNumber  String
+  name           String
+  type           ContractType
+  description    String?
+  bodyHtml       String       @db.Text
+  fieldsSnapshot Json         @default("[]")
+  changeReason   String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+
+  template ContractTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, versionNumber])
+  @@index([templateId])
+}
+
+model ContractTemplateField {
+  id         String  @id @default(uuid())
+  templateId String
+  key        String
+  label      String
+  fieldType  String  @default("text")
+  required   Boolean @default(false)
+  sortOrder  Int     @default(0)
+
+  template ContractTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, key])
+}
+
+model Contract {
+  id              String         @id @default(uuid())
+  companyId       String
+  templateId      String?
+  title           String
+  type            ContractType
+  status          ContractStatus @default(RASCUNHO)
+  partyName       String
+  partyDocument   String?
+  value           Decimal        @db.Decimal(14, 2)
+  valueMonthly    Boolean        @default(false)
+  startDate       DateTime?
+  endDate         DateTime?
+  fieldValues     Json           @default("{}")
+  bodyHtml        String         @db.Text
+  signedAt        DateTime?
+  parentContractId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  template         ContractTemplate?  @relation(fields: [templateId], references: [id])
+  signatureRequests SignatureRequest[]
+  signatureFlows   ContractSignatureFlow[]
+  documents        ContractDocument[]
+  versions         ContractVersion[]
+  approvals        ContractApproval[]
+  vigenciaAlerts   VigenciaAlert[]
+  obras            Obra[]
+
+  @@index([companyId, status])
+}
+
+model SignatureRequest {
+  id         String           @id @default(uuid())
+  contractId String
+  channel    SignatureChannel
+  status     SignatureStatus  @default(PENDENTE)
+  token      String           @unique @default(uuid())
+  recipient  String
+  sentAt     DateTime         @default(now())
+  signedAt   DateTime?
+  expiresAt  DateTime
+  attempts   Int              @default(1)
+  lastError  String?
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+}
+
+model ContractSignatureFlow {
+  id                       String              @id @default(uuid())
+  contractId               String
+  status                   SignatureFlowStatus @default(DRAFT)
+  documentHash             String
+  documentPdfHash          String?
+  frozenBodyHtml           String              @db.Text
+  frozenPdfUploadId        String?
+  signatureFieldPlacements Json?
+  legalTermsVersion        String
+  legalPrivacyVersion      String
+  signMode                 SignatureFlowMode   @default(SEQUENTIAL)
+  startedAt                DateTime?
+  completedAt              DateTime?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  contract  Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  signers   ContractSigner[]
+  events    SignatureEvent[]
+  documents ContractDocument[]
+
+  @@index([contractId, status])
+}
+
+model ContractSigner {
+  id                 String               @id @default(uuid())
+  flowId             String
+  signOrder          Int
+  role               String               @default("signatario")
+  name               String
+  email              String?
+  phone              String?
+  status             ContractSignerStatus @default(WAITING)
+  token              String               @unique @default(uuid())
+  channel            SignatureChannel
+  recipient          String
+  sentAt             DateTime?
+  viewedAt           DateTime?
+  consentAt          DateTime?
+  signedAt           DateTime?
+  expiresAt          DateTime?
+  signerName         String?
+  signatureImage     String?              @db.Text
+  signatureTyped     String?
+  signerIp           String?
+  signerUserAgent    String?
+  documentHashAtSign String?
+
+  otps SignerOtp[]
+
+  flow   ContractSignatureFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  events SignatureEvent[]
+
+  @@unique([flowId, signOrder])
+  @@index([flowId, status])
+}
+
+model SignatureEvent {
+  id                String             @id @default(uuid())
+  flowId            String
+  signerId          String?
+  eventType         SignatureEventType
+  metadata          Json?
+  ip                String?
+  userAgent         String?
+  previousEventHash String?
+  eventHash         String
+  createdAt         DateTime           @default(now())
+
+  flow   ContractSignatureFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  signer ContractSigner?       @relation(fields: [signerId], references: [id])
+
+  @@index([flowId, createdAt])
+}
+
+model ContractDocument {
+  id          String               @id @default(uuid())
+  contractId  String
+  flowId      String
+  type        ContractDocumentType @default(SIGNED_PDF)
+  uploadId    String
+  contentHash String
+  generatedAt DateTime             @default(now())
+
+  contract Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  flow     ContractSignatureFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@unique([flowId, type])
+  @@index([contractId])
+}
+
+model Obra {
+  id              String   @id @default(uuid())
+  companyId       String
+  contractId      String?
+  name            String
+  address         String?
+  budgetPlanned   Decimal  @db.Decimal(14, 2) @default(0)
+  status          String   @default("ativa")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contract       Contract?       @relation(fields: [contractId], references: [id])
+  steps          ObraStep[]
+  vistorias      ObraVistoria[]
+  custos         ObraCusto[]
+  purchaseOrders PurchaseOrder[]
+  occurrences    ObraOccurrence[]
+}
+
+model ObraStep {
+  id          String     @id @default(uuid())
+  obraId      String
+  phase       ObraPhase?
+  title       String
+  description String?    @db.Text
+  done        Boolean    @default(false)
+  sortOrder   Int        @default(0)
+
+  obra            Obra            @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  vistorias       ObraVistoria[]
+  custos          ObraCusto[]
+  purchaseOrders  PurchaseOrder[]
+}
+
+model ObraVistoria {
+  id          String       @id @default(uuid())
+  obraId      String
+  obraStepId  String?
+  type        VistoriaType
+  description String       @db.Text
+  photoUrls   String[]     @default([])
+  startedAt   DateTime
+  endedAt     DateTime
+  nonConformities ObraNonConformity[]
+  createdAt   DateTime     @default(now())
+
+  obra     Obra      @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  obraStep ObraStep? @relation(fields: [obraStepId], references: [id], onDelete: SetNull)
+
+  @@index([obraStepId])
+}
+
+model ObraCusto {
+  id               String           @id @default(uuid())
+  obraId           String
+  obraStepId       String?
+  category         ObraCostCategory
+  description      String
+  amount           Decimal          @db.Decimal(14, 2)
+  date             DateTime         @default(now())
+  purchaseOrderId  String?
+
+  obra          Obra           @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  obraStep      ObraStep?      @relation(fields: [obraStepId], references: [id], onDelete: SetNull)
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseOrderId])
+  @@index([obraStepId])
+}
+
+model PurchaseOrder {
+  id             String              @id @default(uuid())
+  companyId      String
+  obraId         String
+  obraStepId     String?
+  number         String
+  category       ObraCostCategory
+  payerCnpj      String
+  description    String
+  amount         Decimal             @db.Decimal(14, 2)
+  status         PurchaseOrderStatus @default(RASCUNHO)
+  contractId     String?
+  receivedAmount Decimal             @db.Decimal(14, 2) @default(0)
+  approvedById   String?
+  approvedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  company  Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  obra     Obra       @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  obraStep ObraStep?  @relation(fields: [obraStepId], references: [id], onDelete: SetNull)
+  custos   ObraCusto[]
+
+  @@unique([companyId, number])
+  @@index([obraStepId])
+}
+
+model Upload {
+  id         String   @id @default(uuid())
+  companyId  String
+  entityType String
+  entityId   String
+  filename   String
+  path       String
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  companyId  String
+  userId     String?
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  beforeValue Json?
+  afterValue  Json?
+  createdAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+}
+
+model ContractVersion {
+  id            String   @id @default(uuid())
+  contractId    String
+  versionNumber String
+  bodyHtml      String   @db.Text
+  fieldValues   Json     @default("{}")
+  partyName     String
+  value         Decimal  @db.Decimal(14, 2)
+  changeReason  String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, versionNumber])
+  @@index([contractId])
+}
+
+model ContractApproval {
+  id             String         @id @default(uuid())
+  contractId     String
+  status         ApprovalStatus @default(PENDING)
+  currentStep    Int            @default(1)
+  rejectedReason String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  contract Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  steps    ContractApprovalStep[]
+
+  @@index([contractId, status])
+}
+
+model ContractApprovalStep {
+  id             String             @id @default(uuid())
+  approvalId     String
+  stepOrder      Int
+  requiredRole   String
+  approverUserId String?
+  status         ApprovalStepStatus @default(WAITING)
+  comment        String?
+  actedAt        DateTime?
+
+  approval ContractApproval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+
+  @@unique([approvalId, stepOrder])
+}
+
+model VigenciaAlert {
+  id          String   @id @default(uuid())
+  contractId  String
+  daysBefore  Int
+  sentAt      DateTime @default(now())
+  actionTaken String?
+  acknowledged Boolean @default(false)
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, daysBefore, sentAt])
+  @@index([contractId])
+}
+
+model SignerOtp {
+  id        String   @id @default(uuid())
+  signerId  String
+  code      String
+  expiresAt DateTime
+  verifiedAt DateTime?
+  createdAt DateTime @default(now())
+
+  signer ContractSigner @relation(fields: [signerId], references: [id], onDelete: Cascade)
+
+  @@index([signerId])
+}
+
+model PurchaseRequest {
+  id          String                @id @default(uuid())
+  companyId   String
+  obraId      String?
+  description String
+  amount      Decimal               @db.Decimal(14, 2)
+  status      PurchaseRequestStatus @default(RASCUNHO)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status])
+}
+
+model ObraOccurrence {
+  id          String   @id @default(uuid())
+  obraId      String
+  title       String
+  description String   @db.Text
+  severity    String   @default("media")
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  obra Obra @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  @@index([obraId])
+}
+
+model ObraNonConformity {
+  id          String   @id @default(uuid())
+  vistoriaId  String
+  description String   @db.Text
+  severity    String   @default("media")
+  dueDate     DateTime?
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  vistoria ObraVistoria @relation(fields: [vistoriaId], references: [id], onDelete: Cascade)
+
+  @@index([vistoriaId])
+}

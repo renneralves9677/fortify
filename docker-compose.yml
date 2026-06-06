@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: fortify-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fortify
+      POSTGRES_PASSWORD: fortify
+      POSTGRES_DB: fortify
+    ports:
+      - "5432:5432"
+    volumes:
+      - fortify_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fortify -d fortify"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  fortify_pg_data:

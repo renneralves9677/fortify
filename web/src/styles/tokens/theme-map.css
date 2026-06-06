@@ -1,0 +1,56 @@
+@theme {
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display-family);
+
+  --color-brand: var(--palette-brand);
+  --color-brand-light: var(--palette-brand-light);
+  --color-brand-hover: var(--palette-brand-hover);
+  --color-on-brand: var(--palette-on-brand);
+  --color-on-brand-muted: var(--palette-on-brand-muted);
+  --color-surface: var(--palette-surface);
+  --color-surface-elevated: var(--palette-surface-elevated);
+  --color-surface-sunken: var(--palette-surface-sunken);
+  --color-border: var(--palette-border);
+  --color-border-strong: var(--palette-border-strong);
+  --color-ink: var(--palette-ink);
+  --color-ink-muted: var(--palette-ink-muted);
+  --color-ink-subtle: var(--palette-ink-subtle);
+  --color-success: var(--palette-success);
+  --color-warning: var(--palette-warning);
+  --color-danger: var(--palette-danger);
+  --color-info: var(--palette-info);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-control: var(--token-radius-control);
+  --radius-card: var(--token-radius-card);
+  --radius-tile: var(--token-radius-tile);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --shadow-card: var(--effect-shadow-card);
+  --shadow-sm: var(--effect-shadow-sm);
+  --shadow-md: var(--effect-shadow-md);
+  --shadow-pop: var(--effect-shadow-pop);
+
+  --animate-spin: spin 1s linear infinite;
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

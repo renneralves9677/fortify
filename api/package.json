@@ -1,0 +1,57 @@
+{
+  "name": "fortify-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "seed": "tsx prisma/seed.ts",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint:arch": "tsx scripts/lint-architecture.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
+    "nodemailer": "^8.0.10",
+    "pdf-lib": "^1.17.1",
+    "playwright": "^1.60.0",
+    "sanitize-html": "^2.17.4",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.36"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.18",
+    "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.15.21",
+    "@types/nodemailer": "^8.0.0",
+    "@types/sanitize-html": "^2.16.1",
+    "@types/supertest": "^6.0.3",
+    "@vitest/coverage-v8": "^3.2.4",
+    "prisma": "^6.8.2",
+    "supertest": "^7.1.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

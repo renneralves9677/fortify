@@ -1,0 +1,19 @@
+import { LegalDocumentLayout } from '../components/LegalDocumentLayout';
+import { privacySections } from '../lib/legal-content';
+
+export default function PrivacyPage() {
+  return (
+    <LegalDocumentLayout title="Política de Privacidade">
+      {privacySections.map((section) => (
+        <section key={section.title}>
+          <h2 className="font-display text-xl font-semibold">{section.title}</h2>
+          {section.paragraphs.map((paragraph) => (
+            <p key={paragraph.slice(0, 40)} className="mt-3 text-sm leading-relaxed text-ink-muted">
+              {paragraph}
+            </p>
+          ))}
+        </section>
+      ))}
+    </LegalDocumentLayout>
+  );
+}

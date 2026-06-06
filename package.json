@@ -1,0 +1,21 @@
+{
+  "name": "fortify",
+  "private": true,
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "setup": "npm install --prefix api && npm install --prefix web",
+    "migrate": "npm run prisma:migrate --prefix api",
+    "seed": "npm run seed --prefix api",
+    "dev:api": "npm run dev --prefix api",
+    "dev:web": "npm run dev --prefix web",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "test": "npm run test --prefix api && npm run test --prefix web",
+    "test:api": "npm run test --prefix api",
+    "test:web": "npm run test --prefix web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

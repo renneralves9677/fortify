@@ -1,0 +1,30 @@
+# Ferramentas e documentação local (não versionar)
+.cursor/
+.claude/
+docs/
+/scripts/
+
+# Dependências (nunca versionar)
+node_modules/
+**/node_modules/
+
+# Build
+dist/
+build/
+**/dist/
+
+# Variáveis de ambiente — nunca versionar (manter *.example)
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Artefatos de runtime
+uploads/
+api/uploads/
+coverage/
+.vite/
+
+# Sistema / logs
+*.log
+.DS_Store

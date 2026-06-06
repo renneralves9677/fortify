@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-ssr/
+
+# .env nunca versionar
+.env
+.env.*
+!.env.example
