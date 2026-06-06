@@ -196,24 +196,3 @@ Sem `SMTP_HOST`, os e-mails aparecem no console como `[MOCK EMAIL]`. Com `WHATSA
 
 **PDF de assinatura lento ou falha**  
 Use `SIGNATURE_PDF_MOCK=true` localmente ou instale dependências do Playwright (`npx playwright install` em `api/`).
-
-## LGPD
-
-Endpoints principais:
-
-| Endpoint | Descrição |
-|----------|-----------|
-| `GET /api/legal/versions` | Versões legais (público) |
-| `POST /api/auth/consent` | Registra consentimento (Bearer) |
-| `GET /api/privacy/me` | Dados do titular |
-| `GET /api/privacy/export` | Portabilidade JSON |
-
-Páginas web: `/termos`, `/privacidade`, centro em `/configuracoes`.
-
-## Documentação adicional
-
-- [API](api/README.md) — rotas e regras de O.C./custos
-- [Web](web/README.md) — estrutura do frontend
-- [Brain Obsidian](docs/brain/00-Home.md) — abrir `docs/brain/` no Obsidian
-- [Plano mestre](docs/brain/PLANO-MESTRE.md)
-- [Skills Cursor](docs/brain/Skills/00-Index-Skills.md) — `.cursor/skills/`
